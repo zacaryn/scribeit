@@ -1,6 +1,6 @@
-# Meeting.AI
+# ScribeIt
 
-Meeting.AI is a SaaS platform that uses AI to transcribe and summarize audio/video content from meetings, lectures, and videos. It provides structured notes, key takeaways, and action items to help users save time and extract valuable insights.
+ScribeIt is a SaaS platform that uses AI to transcribe and summarize audio/video content from meetings, lectures, and videos. It provides structured notes, key takeaways, and action items to help users save time and extract valuable insights.
 
 ## Features
 
