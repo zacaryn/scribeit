@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 import tempfile
 import os
 import logging
-from pydub import AudioSegment
+# Removing pydub import since it's not compatible with Python 3.13
+# from pydub import AudioSegment
 from typing import Optional
 import shutil
 
