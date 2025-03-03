@@ -1,34 +1,44 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const router = useRouter();
+  const { login, error: authError, isLoading: authLoading, user, clearError } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+
+  // If user is already logged in, redirect to dashboard
+  useEffect(() => {
+    if (user) {
+      router.push('/dashboard');
+    }
+  }, [user, router]);
+
+  // Update local error state when auth error changes
+  useEffect(() => {
+    if (authError) {
+      setError(authError);
+    }
+  }, [authError]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    clearError();
     setError('');
 
-    // In a real app, you would validate and send the login request to your backend
-    // This is just a simplified example
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // For demo, we'll just redirect to dashboard on any login
-      router.push('/dashboard');
-    } catch (err) {
-      setError('Invalid email or password. Please try again.');
-    } finally {
-      setIsLoading(false);
+    // Validate form
+    if (!email || !password) {
+      setError('Please enter both email and password');
+      return;
     }
+
+    // Call login function from auth context
+    await login(email, password);
   };
 
   return (
@@ -141,10 +151,10 @@ export default function Login() {
             <div>
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={authLoading}
                 className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
-                {isLoading ? (
+                {authLoading ? (
                   <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -156,7 +166,7 @@ export default function Login() {
                     </svg>
                   </span>
                 )}
-                {isLoading ? 'Signing in...' : 'Sign in'}
+                {authLoading ? 'Signing in...' : 'Sign in'}
               </button>
             </div>
           </form>

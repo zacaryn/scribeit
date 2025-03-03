@@ -13,8 +13,8 @@ from ...models.user import User
 from ...models.summary import Summary
 from ...services.s3_service import S3Service
 from ...services.openai_service import OpenAIService
-# In a real app you would have authentication
-# from ...core.auth import get_current_user
+# Enable authentication
+from ...core.auth import get_current_user
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -55,6 +55,7 @@ def process_media_file(file_path, summary_id, db):
         summary.summary_text = parsed_summary["summary"]
         summary.key_points = parsed_summary["key_points"]
         summary.action_items = parsed_summary["action_items"]
+        summary.notable_quotes = parsed_summary.get("notable_quotes", [])
         summary.status = "completed"
         
         # Commit changes
@@ -82,16 +83,12 @@ async def upload_file(
     file: UploadFile = File(...),
     title: Optional[str] = Form(None),
     db: Session = Depends(get_db),
-    # In a real app, you would uncomment this:
-    # current_user: User = Depends(get_current_user)
+    # Use real user authentication
+    current_user: User = Depends(get_current_user)
 ):
     """
     Upload and process an audio/video file
     """
-    # For demo purposes, we're using a mock user
-    # In a real app, you would use the authenticated user
-    mock_user_id = "mock-user-123"
-    
     try:
         # Validate file extension
         allowed_extensions = {"mp3", "mp4", "wav", "m4a", "webm"}
@@ -105,7 +102,7 @@ async def upload_file(
         
         # Create a new summary record
         new_summary = Summary(
-            user_id=mock_user_id,
+            user_id=current_user.id,
             title=title or file.filename,
             source_type="file_upload",
             original_filename=file.filename,
@@ -117,7 +114,7 @@ async def upload_file(
         db.refresh(new_summary)
         
         # Save file to S3
-        s3_key = s3_service.upload_file(file.file, file.filename, mock_user_id)
+        s3_key = s3_service.upload_file(file.file, file.filename, current_user.id)
         
         # Update summary with S3 key
         new_summary.s3_file_key = s3_key
@@ -153,19 +150,20 @@ async def upload_file(
 async def get_status(
     summary_id: str,
     db: Session = Depends(get_db),
-    # In a real app, you would uncomment this:
-    # current_user: User = Depends(get_current_user)
+    # Use real user authentication
+    current_user: User = Depends(get_current_user)
 ):
     """
     Get processing status for a summary
     """
-    # For demo purposes, we're using a mock user
-    # In a real app, you would check if the summary belongs to the authenticated user
-    
     summary = db.query(Summary).filter(Summary.id == summary_id).first()
     
     if not summary:
         raise HTTPException(status_code=404, detail="Summary not found")
+    
+    # Check if the summary belongs to the current user
+    if summary.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to access this summary")
     
     return {
         "summary_id": summary.id,
@@ -179,19 +177,20 @@ async def get_status(
 async def get_result(
     summary_id: str,
     db: Session = Depends(get_db),
-    # In a real app, you would uncomment this:
-    # current_user: User = Depends(get_current_user)
+    # Use real user authentication
+    current_user: User = Depends(get_current_user)
 ):
     """
     Get processing result for a summary
     """
-    # For demo purposes, we're using a mock user
-    # In a real app, you would check if the summary belongs to the authenticated user
-    
     summary = db.query(Summary).filter(Summary.id == summary_id).first()
     
     if not summary:
         raise HTTPException(status_code=404, detail="Summary not found")
+    
+    # Check if the summary belongs to the current user
+    if summary.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to access this summary")
     
     if summary.status != "completed":
         return {

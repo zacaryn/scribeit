@@ -3,188 +3,202 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Header from '../components/Header';
+import ProtectedRoute from '../components/ProtectedRoute';
+import { useAuth } from '../context/AuthContext';
+
+// API base URL
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export default function DashboardPage() {
+  const { user, token } = useAuth();
   const [summaries, setSummaries] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({
-    tier: 'Pro',
-    minutesUsed: 120,
-    minutesTotal: 400
+    tier: '',
+    minutesUsed: 0,
+    minutesTotal: 0,
+    minutesRemaining: 0,
+    subscriptionStatus: '',
+    renewalDate: null
   });
 
+  // Fetch user's summaries and usage stats
   useEffect(() => {
-    // In a real app, this would fetch from your API
-    setTimeout(() => {
-      setSummaries([
-        {
-          id: '1',
-          title: 'Marketing Team Weekly Sync',
-          status: 'completed',
-          created_at: 'March 17, 2025',
-          source_type: 'upload',
-          minutes_charged: 45
-        },
-        {
-          id: '2',
-          title: 'Product Planning Session',
-          status: 'completed',
-          created_at: 'April 3, 2025',
-          source_type: 'youtube',
-          minutes_charged: 32
-        },
-        {
-          id: '3',
-          title: 'Quarterly Review Meeting',
-          status: 'completed',
-          created_at: 'May 12, 2025',
-          source_type: 'upload',
-          minutes_charged: 58
-        },
-        {
-          id: '4',
-          title: 'Customer Feedback Discussion',
-          status: 'processing',
-          created_at: 'June 1, 2025',
-          source_type: 'upload',
-          minutes_charged: null
-        },
-        {
-          id: '5',
-          title: 'Executive Team Standup',
-          status: 'completed',
-          created_at: 'June 5, 2025',
-          source_type: 'youtube',
-          minutes_charged: 15
+    const fetchData = async () => {
+      if (!token) return;
+      
+      setIsLoading(true);
+      try {
+        // Fetch summaries
+        const summariesResponse = await fetch(`${API_URL}/api/dashboard/summaries`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (summariesResponse.ok) {
+          const summariesData = await summariesResponse.json();
+          setSummaries(summariesData);
         }
-      ]);
-      setIsLoading(false);
-    }, 1000);
-  }, []);
+        
+        // Fetch usage stats
+        const usageResponse = await fetch(`${API_URL}/api/dashboard/usage`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (usageResponse.ok) {
+          const usageData = await usageResponse.json();
+          setStats(usageData);
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [token]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header user={{ name: 'John Doe', email: 'john@example.com' }} />
-      
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="mb-8 bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Your Usage</h2>
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-              <div>
-                <p className="text-gray-600">Current Plan: <span className="font-medium">{stats.tier}</span></p>
-                <p className="text-gray-600">Minutes Used: <span className="font-medium">{stats.minutesUsed} / {stats.minutesTotal}</span></p>
-              </div>
-              <div className="mt-4 sm:mt-0">
-                <span className="inline-flex rounded-md shadow-sm">
-                  <button
-                    type="button"
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-500"
-                  >
-                    Upgrade Plan
-                  </button>
-                </span>
-              </div>
+    <ProtectedRoute>
+      <div className="min-h-screen bg-gray-100">
+        <Header />
+        
+        <main className="py-10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            {/* Dashboard header */}
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+              <p className="mt-1 text-sm text-gray-500">
+                Welcome back, {user?.first_name || 'User'}! Here's an overview of your activity.
+              </p>
             </div>
-            <div className="mt-4 w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-indigo-600 rounded-full"
-                style={{ width: `${(stats.minutesUsed / stats.minutesTotal) * 100}%` }}
-              ></div>
-            </div>
-            <p className="mt-2 text-sm text-gray-500">Current billing period: June 1, 2025 - June 30, 2025</p>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="flex justify-between items-center p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">Your Summaries</h2>
-              <div className="flex space-x-4">
-                <Link 
-                  href="/upload"
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-500"
-                >
-                  Upload File
-                </Link>
-                <Link 
-                  href="/youtube"
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  YouTube Link
+            
+            {/* Usage stats */}
+            <div className="bg-white shadow rounded-lg mb-8 p-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">Your Subscription</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-indigo-50 p-4 rounded-lg">
+                  <p className="text-sm text-indigo-700 font-medium">Current Plan</p>
+                  <p className="text-2xl font-bold text-indigo-900 mt-1 capitalize">{stats.tier}</p>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <p className="text-sm text-green-700 font-medium">Minutes Remaining</p>
+                  <p className="text-2xl font-bold text-green-900 mt-1">{stats.minutesRemaining}</p>
+                </div>
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <p className="text-sm text-blue-700 font-medium">Minutes Used</p>
+                  <p className="text-2xl font-bold text-blue-900 mt-1">{stats.minutesUsed}</p>
+                </div>
+              </div>
+              
+              {/* Progress bar */}
+              <div className="mt-6">
+                <div className="flex justify-between text-sm text-gray-600 mb-1">
+                  <span>Usage</span>
+                  <span>{stats.minutesUsed} / {stats.minutesTotal} minutes</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div 
+                    className="bg-indigo-600 h-2.5 rounded-full" 
+                    style={{ width: `${Math.min(100, (stats.minutesUsed / stats.minutesTotal) * 100)}%` }}
+                  ></div>
+                </div>
+              </div>
+              
+              <div className="mt-6 flex justify-end">
+                <Link href="/pricing" className="text-indigo-600 hover:text-indigo-800 font-medium">
+                  Upgrade Plan →
                 </Link>
               </div>
             </div>
             
-            {isLoading ? (
-              <div className="p-6 flex justify-center">
-                <p className="text-gray-500">Loading your summaries...</p>
+            {/* Recent summaries */}
+            <div className="bg-white shadow rounded-lg">
+              <div className="px-6 py-5 border-b border-gray-200">
+                <h2 className="text-xl font-semibold text-gray-800">Recent Summaries</h2>
               </div>
-            ) : summaries.length === 0 ? (
-              <div className="p-6 text-center">
-                <p className="text-gray-500 mb-4">You don't have any summaries yet</p>
-                <p className="text-gray-500">Upload a recording or provide a YouTube link to get started</p>
-              </div>
-            ) : (
-              <div>
-                <ul className="divide-y divide-gray-200">
-                  {summaries.map((summary) => (
-                    <li key={summary.id} className="hover:bg-gray-50">
-                      <Link href={`/summary/${summary.id}`} className="block">
-                        <div className="px-6 py-4">
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium text-indigo-600 truncate">
-                              {summary.title}
-                            </p>
-                            <div className="ml-2 flex-shrink-0 flex">
-                              {summary.status === 'completed' ? (
-                                <p className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                  Completed
-                                </p>
-                              ) : summary.status === 'processing' ? (
-                                <p className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                  Processing
-                                </p>
-                              ) : (
-                                <p className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                                  Failed
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="mt-2 flex justify-between">
-                            <div className="sm:flex">
-                              <p className="flex items-center text-sm text-gray-500">
-                                {summary.source_type === 'upload' ? (
-                                  <svg className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clipRule="evenodd" />
-                                  </svg>
-                                ) : (
-                                  <svg className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
-                                  </svg>
-                                )}
-                                {summary.source_type === 'upload' ? 'Uploaded File' : 'YouTube Video'}
-                              </p>
-                              <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0 sm:ml-6">
-                                <svg className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                  <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-                                </svg>
-                                {summary.created_at}
-                              </p>
-                            </div>
-                            {summary.minutes_charged && (
-                              <p className="text-sm text-gray-500">{summary.minutes_charged} mins</p>
-                            )}
-                          </div>
-                        </div>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+              
+              {isLoading ? (
+                <div className="p-6 flex justify-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+                </div>
+              ) : summaries.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Title
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Date
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Source
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Minutes
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {summaries.map((summary: any) => (
+                        <tr key={summary.id}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">{summary.title}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-500">{summary.created_at}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                              {summary.source_type}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {summary.minutes_charged}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              summary.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {summary.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <Link href={`/summary/${summary.id}`} className="text-indigo-600 hover:text-indigo-900">
+                              View
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-6 text-center">
+                  <p className="text-gray-500">You don't have any summaries yet.</p>
+                  <div className="mt-4">
+                    <Link href="/upload" className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                      Create your first summary
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </main>
-    </div>
+        </main>
+      </div>
+    </ProtectedRoute>
   );
 } 

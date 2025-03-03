@@ -26,6 +26,7 @@ class Summary(Base):
     summary_text = Column(Text, nullable=True)
     key_points = Column(JSON, nullable=True)  # Store as JSON array
     action_items = Column(JSON, nullable=True)  # Store as JSON array
+    notable_quotes = Column(JSON, nullable=True)  # Store as JSON array of notable quotes
     speaker_labels = Column(JSON, nullable=True)  # Store as JSON object mapping speaker ids to text
     
     # Timestamps

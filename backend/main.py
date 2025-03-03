@@ -11,7 +11,7 @@ load_dotenv()
 
 # Create FastAPI app
 app = FastAPI(
-    title="Meeting.AI API",
+    title="ScribeIt API",
     description="API for transcribing and summarizing audio/video content",
     version="0.1.0"
 )
@@ -37,7 +37,7 @@ async def health_check():
 @app.get("/")
 async def root():
     return {
-        "message": "Welcome to Meeting.AI API",
+        "message": "Welcome to ScribeIt API",
         "docs": "/docs",
         "health": "/health"
     }
